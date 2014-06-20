@@ -1,0 +1,270 @@
+#+TITLE: Visualization of raster data with *=rasterVis=*
+#+AUTHOR:    Oscar Perpiñán Lamigueiro \\ http://oscarperpinan.github.io
+#+EMAIL:     oscar.perpinan@gmail.com
+#+DATE:      GEOSTAT \\ June 2014
+
+
+* Background
+
+** About me
+During the past 15 years, my main area of expertise has been
+photovoltaic solar energy systems, with a special interest in solar
+radiation.
+
+** I have developed some packages
+- [[http://oscarperpinan.github.io/solar][=solaR=]] :: Solar radiation and performance of photovoltaic systems.
+- [[http://oscarperpinan.github.io/rastervis][=rasterVis=]] :: Visualization of raster data.
+- [[https://github.com/oscarperpinan/meteoForecast][=meteoForecast=]] :: (beta) Retrieve NWP-WRF output from Meteogalicia and
+     OpenMeteo services.
+
+* Background
+
+** Origins of *=rasterVis=*
+I started *=rasterVis=* with Robert Hijmans three years ago when I was
+involved in an [[https://github.com/oscarperpinan/CMSAF-SIAR][analysis of solar radiation]] satellite data ([[http://wui.cmsaf.eu/safira/action/viewDoiDetails?acronym%3DRAD_MVIRI_V001][CM SAF]]) and ground
+measurements ([[http://eportal.magrama.gob.es/websiar/SeleccionParametrosMap.aspx?dst%3D1][SIAR]])
+
+- CM SAF :: a =RasterStack= with 730 layers of daily radiation.
+- SIAR :: a set of 300 time series (one for each station) each with
+  730 records.
+
+
+* Background
+
+** Objectives
+I needed methods to display spatio-temporal raster data and combine it
+easily with vector data with *two main objectives*:
+- Understand data
+- Communicate results
+
+* 
+** The *=rasterVis=* package complements the [[http://cran.r-project.org/web/packages/raster][=raster=]] package, providing a set of methods for enhanced visualization.
+
+- *Level and contour plots* of quantitative and categorical data both
+  for univariate and multivariate rasters.
+- *Exploratory Data Analysis*: Scatterplots, Histograms and Density
+  plots, Violin and Boxplots, Matrix of scatterplots.
+- *Spatio-temporal rasters*: [[http://en.wikipedia.org/wiki/Hovm%25C3%25B6ller_diagram][Hovmöller diagrams]], [[http://www.perceptualedge.com/blog/?p%3D390][horizon
+  graphs]], and time series plots.
+- *Vector fields* using arrows or streamlines.
+
+* =rasterVis= is based on =grid= and =lattice=
+
+** grid
+- In =R= there are two systems, traditional and grid graphics.
+- The =grid= package is a flexible low-level graphics toolbox that
+  provides more flexibility to modify or add content, better support
+  for combining different outputs easily, and more possibilities for
+  interaction.
+
+* =rasterVis= is based on =grid= and =lattice=
+
+** lattice
+- The =lattice= package is an implementation of Trellis graphic, a
+  rectangular array of panels.
+
+- =lattice= uses a /formula/ interface to define the structure of the
+  array of panels with the specification of the variables involved in
+  the plot.
+
+- The =latticeExtra= package complements the =lattice= with the
+  implementation of layers, and superposition of =trellis= objects and
+  layers.
+
+
+* =levelplot= 
+
+#+begin_src R
+## Solar Radiation (CM SAF)
+levelplot(SISmm)
+#+end_src
+
+#+BEGIN_CENTER
+[[file:figs/levelplot.png]]
+
+#+END_CENTER
+
+* Combine raster and vector data
+
+#+begin_src R
+  levelplot(SISmm, layers = 'Apr') +
+      layer(sp.points(spSIAR, pch = 21,
+                      fill ='darkgray',
+                      col = 'black'))
+#+end_src
+
+#+BEGIN_CENTER
+[[file:figs/levelplot_points.png]]
+#+END_CENTER
+  
+* Movie
+#+begin_src R
+  ## Cloud Cover forecasts (MeteoGalicia)
+
+  ## Create a frame for each layer
+  trellis.device(png,
+                 file=paste0(tmp, '/Rplot%02d.png'))
+  levelplot(cft, layout=c(1, 1))
+  dev.off()
+  ## Paste the frames together with ffmpeg
+  movieCMD <- 'ffmpeg -r 6 -b 300k -i Rplot%02d.png output.mp4'
+  system(movieCMD)
+#+end_src
+
+#+BEGIN_CENTER
+[[http://player.vimeo.com/video/65227780][Click here to watch the video]]
+#+END_CENTER
+
+* Themes
+
+#+begin_src R
+  library(colorspace)
+  myTheme <- rasterTheme(region=sequential_hcl(10,
+                             power=2.2))
+  levelplot(Aug, par.settings=myTheme,
+            contour=TRUE)
+#+end_src
+
+#+BEGIN_CENTER
+[[file:figs/levelplot_colorspace.png]]
+#+END_CENTER
+
+* 3D interactive graphics
+
+#+begin_src R
+## Digital Elevation Model (Spain)
+plot3D(DEM)
+#+end_src
+
+#+BEGIN_CENTER
+#+ATTR_LATEX: :height 0.5\textheight
+[[file:figs/DEM_STL_GitHub.png]] 
+
+[[https://github.com/oscarperpinan/spacetime-vis/blob/gh-pages/images/DEM.stl][Click here to see the 3D object rendered in GitHub.]]
+#+END_CENTER
+
+* Categorical data
+
+#+begin_src R
+  ## Land cover (NASA)
+  levelplot(landClass)
+#+end_src
+
+#+BEGIN_CENTER
+[[file:figs/landClass.png]]
+#+END_CENTER
+
+* Scatter plot
+#+begin_src R
+  xyplot(Jan+Feb~Jul|cut(x, 4), data=SISmm,
+         auto.key=list(space='right'))
+#+end_src
+
+#+BEGIN_CENTER
+[[file:figs/xyplot_formula.png]]
+#+END_CENTER
+
+* Scatter plot matrix
+#+begin_src R
+splom(SISmm)
+#+end_src
+
+#+BEGIN_CENTER
+[[file:figs/splom.png]]
+#+END_CENTER
+
+
+* Histograms
+
+#+begin_src R 
+histogram(SISmm)
+#+end_src
+
+#+BEGIN_CENTER
+[[file:figs/histogram.png]]
+#+END_CENTER
+
+* Hövmoller
+
+#+begin_src R
+  ## Sea Surface Temperature (SST) Anomalies
+  hovmoller(SST, contour=FALSE,
+            panel = panel.levelplot.raster,
+            yscale.components = yscale.raster.subticks,
+            interpolate = TRUE, par.settings = RdBuTheme)
+#+end_src
+
+#+BEGIN_CENTER
+[[file:figs/hovmoller.png]]
+#+END_CENTER
+
+* Horizon graph
+#+begin_src R
+horizonplot(SST)
+#+end_src
+
+#+BEGIN_CENTER
+[[file:figs/horizon.png]]
+#+END_CENTER
+
+
+* Vector fields
+#+begin_src R
+  vectorplot(r, par.settings=RdBuTheme())
+#+end_src
+
+#+BEGIN_CENTER
+[[file:figs/vectorplot.png]]
+#+END_CENTER
+
+* Stream lines
+#+begin_src R
+  streamplot(r2, isField=TRUE,
+             streamlet=list(L=30), droplet=list(pc=.3))
+#+end_src
+
+#+BEGIN_CENTER
+[[file:figs/streamplotReds.png]]
+#+END_CENTER
+
+
+* Do you need more?
+
+** Visit the webpage 
+[[http://oscarperpinan.github.io/rastervis/]] (and don't forget the FAQs!)
+
+** I have a book! 
+*“Displaying Time Series, Spatial, and Space-Time Data with R”* includes four chapters related to raster data.
+Its website offers access to the datasets used in the examples as well as the full R code.
+http://oscarperpinan.github.io/spacetime-vis/
+
+#+BEGIN_CENTER
+#+ATTR_LATEX: :height 0.3\textwidth
+[[file:figs/book.jpg]]
+#+END_CENTER
+
+#+PROPERTY:  eval no-export
+#+DESCRIPTION:
+#+KEYWORDS:
+#+LANGUAGE:  en
+#+OPTIONS:   H:1 num:t toc:nil \n:nil @:t ::t |:t ^:nil -:t f:t *:t <:t
+#+OPTIONS:   TeX:t LaTeX:t skip:nil d:nil todo:t pri:nil tags:not-in-toc
+#+INFOJS_OPT: view:nil toc:nil ltoc:t mouse:underline buttons:0 path:http://orgmode.org/org-info.js
+#+EXPORT_SELECT_TAGS: export
+#+EXPORT_EXCLUDE_TAGS: noexport
+#+LINK_UP:   
+#+LINK_HOME: 
+#+XSLT:
+#+startup: beamer
+#+LaTeX_CLASS: beamer
+#+LATEX_CLASS_OPTIONS: [xcolor={usenames,svgnames,dvipsnames}]
+#+LATEX_HEADER: \usepackage{gensymb}
+#+LATEX_HEADER: \DeclareMathOperator{\sign}{sign}
+#+LATEX_HEADER: \lstset{commentstyle=\color{gray!90}, basicstyle=\ttfamily\small, breaklines=true, linewidth=\textwidth, backgroundcolor=\color{gray!10}, basewidth={0.5em,0.4em}, literate={á}{{\'a}}1 {ñ}{{\~n}}1 {é}{{\'e}}1 {ó}{{\'o}}1 {º}{{\textordmasculine}}1}
+#+LATEX_HEADER: \usepackage{mathpazo}
+#+LATEX_HEADER: \usefonttheme{serif}
+#+LATEX_HEADER: \usecolortheme{rose}  
+#+LATEX_HEADER: \hypersetup{colorlinks=true, linkcolor=Blue!50!black, urlcolor=Blue!50!black, breaklinks=true}
+#+LATEX_HEADER_EXTRA: \setbeamercolor{alerted text}{fg=Blue!50!black} \setbeamerfont{alerted text}{series=\bfseries}
+#+BIND: org-latex-image-default-height "0.65\\textheight"
+#+BIND: org-latex-image-default-width ""
